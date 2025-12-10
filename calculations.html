@@ -1,0 +1,76 @@
+
+{% extends "base.html" %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+{% block content %}
+<h2>Calculation Table & Energy Loss Charts</h2>
+
+<div class="row mb-3">
+  <div class="col-md-12">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Fault Name</th>
+          <th>Fault Value</th>
+          <th>Fault Section</th>
+          <th>Date</th>
+          <th>Fault Count</th>
+          <th>Not Fault Count</th>
+          <th>Total Loss</th>
+          <th>Total Gain</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if rows %}
+          {% for r in rows %}
+            <tr>
+              <td>{{ r[0] }}</td>
+              <td>{{ r[1] }}</td>
+              <td>{{ r[2] }}</td>
+              <td>{{ r[3] }}</td>
+              <td>{{ r[4] }}</td>
+              <td>{{ r[5] }}</td>
+              <td>{{ r[6] }}</td>
+              <td>{{ r[7] }}</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="8">No data available</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <h5>Energy Loss by Fault Type (sum of total_loss)</h5>
+    <canvas id="lossChart"></canvas>
+  </div>
+  <div class="col-md-6">
+    <h5>Counts by Fault Type</h5>
+    <canvas id="countChart"></canvas>
+  </div>
+</div>
+
+<script>
+const labels = {{ agg_labels | tojson }};
+const counts = {{ agg_counts | tojson }};
+const losses = {{ agg_losses | tojson }};
+
+const ctxLoss = document.getElementById('lossChart').getContext('2d');
+new Chart(ctxLoss, {
+  type: 'bar',
+  data: { labels, datasets: [{ label: 'Total Loss', data: losses }] },
+  options: { responsive: true, plugins: { legend: { display: false } } }
+});
+
+const ctxCnt = document.getElementById('countChart').getContext('2d');
+new Chart(ctxCnt, {
+  type: 'pie',
+  data: { labels, datasets: [{ label: 'Counts', data: counts }] },
+  options: { responsive: true }
+});
+</script>
+{% endblock %}

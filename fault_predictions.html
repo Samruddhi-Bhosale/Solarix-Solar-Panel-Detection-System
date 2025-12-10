@@ -1,0 +1,48 @@
+
+{% extends "base.html" %}
+{% block content %}
+<div class="row mb-3">
+  <div class="col-md-8">
+    <h2>Fault Predictions (Captured)</h2>
+    <p>Timestamp: {{ data.timestamp }}</p>
+  </div>
+  <div class="col-md-4 text-end">
+    {% if data.health_status == 'Healthy' %}
+      <div class="health-badge health-green">Healthy</div>
+    {% elif data.health_status == 'Warning' %}
+      <div class="health-badge health-yellow">Warning</div>
+    {% else %}
+      <div class="health-badge health-red">Critical</div>
+    {% endif %}
+    <p class="mt-2">{{ data.suggestion }}</p>
+  </div>
+</div>
+
+<div class="row">
+  {% for sec in data.sections %}
+    <div class="col-md-4 mb-3">
+      <div class="card">
+        {% if sec.image %}
+          <img src="{{ url_for('static', filename=sec.image) }}" class="card-img-top section-img" alt="{{ sec.fault_section }}">
+        {% else %}
+          <div class="card-img-top section-img d-flex align-items-center justify-content-center">
+            <small>No image saved</small>
+          </div>
+        {% endif %}
+        <div class="card-body text-center">
+          <h5 class="card-title">{{ sec.fault_section }}</h5>
+          <p class="card-text"><strong>{{ sec.fault_name }}</strong> &nbsp; (Value: {{ sec.fault_value }})</p>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="row mt-3">
+  <div class="col-md-6">
+    <a href="{{ url_for('calculations') }}" class="btn btn-info">Show Calculation Table</a>
+    <button class="btn btn-secondary" onclick="location.reload()">Refresh</button>
+  </div>
+</div>
+{% endblock %}
+

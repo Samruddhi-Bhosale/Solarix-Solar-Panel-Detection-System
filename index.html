@@ -1,0 +1,86 @@
+
+
+
+{% extends "base.html" %}
+{% block content %}
+<div class="row">
+  <div class="col-md-12 text-center mb-3">
+    <!-- <change -->
+    <h1 style="color:#3194f7;">Solarix — Live Panel Feed</h1>
+    <p>Live camera with 3x3 section bounding boxes. Click Detect to analyze current frame.</p>
+    <div class="signals justify-content-center">
+      <div id="sigGreen" class="sig green"></div>
+      <div id="sigYellow" class="sig yellow"></div>
+      <div id="sigRed" class="sig red"></div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div style="width:100%; height:700px; overflow:hidden; border:2px solid #ccc; border-radius:10px;">
+      <img src="{{ url_for('video_feed') }}" class="img-fluid" alt="Video Feed"
+           style="width:100%; height:100%; object-fit:contain;">
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <h5>Actions</h5>
+    <div class="d-grid gap-2">
+      <button class="btn btn-primary btn-lg" id="btnDetect">Detect</button>
+      <button class="btn btn-secondary" onclick="location.reload()">Refresh Page</button>
+      <button class="btn btn-danger" onclick="exitCamera()">Exit</button>
+      <a class="btn btn-outline-info" href="{{ url_for('calculations') }}">View Calculation Table</a>
+    </div>
+    <hr>
+    <div>
+      <h6>Note</h6>
+      <p>Make sure camera is allowed and models exist in <code>/models</code> folder.</p>
+    </div>
+
+    <!-- Alert banner (hidden by default) -->
+    <div id="statusAlert" class="alert d-none mt-3" role="alert"></div>
+  </div>
+</div>
+
+<script>
+function setSignals(status){
+  document.getElementById('sigGreen').classList.remove('active');
+  document.getElementById('sigYellow').classList.remove('active');
+  document.getElementById('sigRed').classList.remove('active');
+  if(status === 'Healthy'){ document.getElementById('sigGreen').classList.add('active'); }
+  else if(status === 'Warning'){ document.getElementById('sigYellow').classList.add('active'); }
+  else if(status === 'Critical'){ document.getElementById('sigRed').classList.add('active'); }
+}
+function showStatusAlert(health, suggestion){
+  const box = document.getElementById('statusAlert');
+  box.classList.remove('d-none', 'alert-success', 'alert-warning', 'alert-danger');
+  if(health === 'Healthy'){ box.classList.add('alert-success'); box.textContent = 'Healthy: ' + suggestion; }
+  else if(health === 'Warning'){ box.classList.add('alert-warning'); box.textContent = 'Warning: ' + suggestion; }
+  else { box.classList.add('alert-danger'); box.textContent = 'Critical: ' + suggestion; }
+}
+
+function loadLastStatus(){
+  fetch('/api/last_status').then(r=>r.json()).then(d=>{
+    if(!d.available){ setSignals('Healthy'); return; } // default
+    setSignals(d.health_status);
+    if(d.health_status !== 'Healthy'){
+      showStatusAlert(d.health_status, d.suggestion);
+    }
+  }).catch(console.error);
+}
+
+document.getElementById('btnDetect').addEventListener('click', function(){
+  fetch('/detect_and_redirect', { method: 'POST' })
+    .then(resp => resp.json())
+    .then(data => {
+      if (data.redirect) window.location.href = data.redirect;
+      else if (data.error) alert('Error: ' + data.error);
+    }).catch(err => {
+      console.error(err);
+      alert('Detection failed. Check server logs.');
+    });
+});
+
+loadLastStatus(); // show signals/alert on load
+</script>
+{% endblock %}
+

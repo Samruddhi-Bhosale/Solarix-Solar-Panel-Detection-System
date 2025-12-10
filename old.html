@@ -1,0 +1,295 @@
+<!-- index.html  -->
+ {% extends "base.html" %}
+{% block content %}
+<div class="row">
+  <div class="col-md-12 text-center mb-3">
+    <h1 style="color:#3194f7;">Solarix — Live Panel Feed</h1>
+    <p>Live camera with 3x3 section bounding boxes. Click Detect to analyze current frame.</p>
+    <div class="signals justify-content-center">
+      <div id="sigGreen" class="sig green"></div>
+      <div id="sigYellow" class="sig yellow"></div>
+      <div id="sigRed" class="sig red"></div>
+    </div>
+  </div>
+
+  <div class="col-md-8">
+    <div style="width:100%; height:700px; overflow:hidden; border:2px solid #ccc; border-radius:10px;">
+      <img src="{{ url_for('video_feed') }}" class="img-fluid" alt="Video Feed"
+           style="width:100%; height:100%; object-fit:contain;">
+    </div>
+  </div>
+
+  <div class="col-md-4">
+    <h5>Actions</h5>
+    <div class="d-grid gap-2">
+      <button class="btn btn-primary btn-lg" id="btnDetect">Detect</button>
+      <button class="btn btn-secondary" onclick="location.reload()">Refresh Page</button>
+      <button class="btn btn-danger" onclick="exitCamera()">Exit</button>
+      <a class="btn btn-outline-info" href="{{ url_for('calculations') }}">View Calculation Table</a>
+    </div>
+    <hr>
+    <div>
+      <h6>Note</h6>
+      <p>Make sure camera is allowed and models exist in <code>/models</code> folder.</p>
+    </div>
+
+    <!-- Alert banner (hidden by default) -->
+    <div id="statusAlert" class="alert d-none mt-3" role="alert"></div>
+  </div>
+</div>
+
+<script>
+function setSignals(status){
+  document.getElementById('sigGreen').classList.remove('active');
+  document.getElementById('sigYellow').classList.remove('active');
+  document.getElementById('sigRed').classList.remove('active');
+  if(status === 'Healthy'){ document.getElementById('sigGreen').classList.add('active'); }
+  else if(status === 'Warning'){ document.getElementById('sigYellow').classList.add('active'); }
+  else if(status === 'Critical'){ document.getElementById('sigRed').classList.add('active'); }
+}
+
+function showStatusAlert(health, suggestion){
+  const box = document.getElementById('statusAlert');
+  box.classList.remove('d-none', 'alert-success', 'alert-warning', 'alert-danger');
+  if(health === 'Healthy'){ box.classList.add('alert-success'); box.textContent = 'Healthy: ' + suggestion; }
+  else if(health === 'Warning'){ box.classList.add('alert-warning'); box.textContent = 'Warning: ' + suggestion; }
+  else { box.classList.add('alert-danger'); box.textContent = 'Critical: ' + suggestion; }
+}
+
+function loadLastStatus(){
+  fetch('/api/last_status').then(r=>r.json()).then(d=>{
+    if(!d.available){ setSignals('Healthy'); return; } // default
+    setSignals(d.health_status);
+    if(d.health_status !== 'Healthy'){
+      showStatusAlert(d.health_status, d.suggestion);
+    }
+  }).catch(console.error);
+}
+
+document.getElementById('btnDetect').addEventListener('click', function(){
+  fetch('/detect_and_redirect', { method: 'POST' })
+    .then(resp => resp.json())
+    .then(data => {
+      if (data.redirect) window.location.href = data.redirect;
+      else if (data.error) alert('Error: ' + data.error);
+    }).catch(err => {
+      console.error(err);
+      alert('Detection failed. Check server logs.');
+    });
+});
+
+loadLastStatus(); // show signals/alert on load
+</script>
+{% endblock %}
+
+
+
+
+<!-- base.html  -->
+
+<!-- <!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solarix - {{ title if title else 'Solar Panel Fault Detection' }}</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    body { font-family: Roboto, Arial, sans-serif; }
+    .health-badge { padding: 0.5rem 0.9rem; border-radius: 0.45rem; color: white; font-weight: 700; }
+    .health-green { background: #28a745; }
+    .health-yellow { background: #ffc107; color: #212529;}
+    .health-red { background: #dc3545; }
+    .section-img { width:100%; height:150px; object-fit:cover; border-radius:6px; }
+    .nav-home { margin-right:1rem; }
+    .btn-exit { background:#ff0b0b; color:#fff; }
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light mb-3">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{{ url_for('index') }}">Solarix</a>
+    <div class="collapse navbar-collapse">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('index') }}">Home</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('fault_predictions') }}">Fault Predictions</a></li>
+        <li class="nav-item"><a class="nav-link" href="{{ url_for('calculations') }}">Calculation Table</a></li>
+      </ul>
+      <div class="d-flex">
+        <button class="btn btn-outline-secondary me-2" onclick="location.reload()">Refresh</button>
+        <button class="btn btn-exit" onclick="exitCamera()">Exit</button>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  {% block content %}{% endblock %}
+</div>
+
+<script>
+function exitCamera() {
+  fetch('/exit', { method: 'POST' })
+    .then(res => res.json())
+    .then(data => {
+      alert('Camera released.');
+      // Optionally, go to home
+      window.location.href = '/';
+    }).catch(err => {
+      console.error(err);
+      alert('Could not release camera (check server).');
+    });
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html> -->
+
+
+<!-- calculation :  -->
+<!-- {% extends "base.html" %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+{% block content %}
+<h2>Calculation Table & Energy Loss Charts</h2>
+
+<div class="row mb-3">
+  <div class="col-md-12">
+    <table class="table table-striped">
+      <thead>
+        <tr>
+          <th>Fault Name</th>
+          <th>Fault Value</th>
+          <th>Fault Section</th>
+          <th>Date</th>
+          <th>Fault Count</th>
+          <th>Not Fault Count</th>
+          <th>Total Loss</th>
+          <th>Total Gain</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if rows %}
+          {% for r in rows %}
+            <tr>
+              <td>{{ r[0] }}</td>
+              <td>{{ r[1] }}</td>
+              <td>{{ r[2] }}</td>
+              <td>{{ r[3] }}</td>
+              <td>{{ r[4] }}</td>
+              <td>{{ r[5] }}</td>
+              <td>{{ r[6] }}</td>
+              <td>{{ r[7] }}</td>
+            </tr>
+          {% endfor %}
+        {% else %}
+          <tr><td colspan="8">No data available</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <h5>Energy Loss by Fault Type (sum of total_loss)</h5>
+    <canvas id="lossChart"></canvas>
+  </div>
+  <div class="col-md-6">
+    <h5>Counts by Fault Type</h5>
+    <canvas id="countChart"></canvas>
+  </div>
+</div>
+
+<script>
+const labels = {{ agg_labels | tojson }};
+const counts = {{ agg_counts | tojson }};
+const losses = {{ agg_losses | tojson }};
+
+// Loss chart
+const ctxLoss = document.getElementById('lossChart').getContext('2d');
+new Chart(ctxLoss, {
+  type: 'bar',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'Total Loss',
+      data: losses,
+      // no explicit colors so Chart.js default will be used
+    }]
+  },
+  options: {
+    responsive: true,
+    plugins: { legend: { display: false } }
+  }
+});
+
+// Counts chart
+const ctxCnt = document.getElementById('countChart').getContext('2d');
+new Chart(ctxCnt, {
+  type: 'pie',
+  data: {
+    labels: labels,
+    datasets: [{
+      label: 'Counts',
+      data: counts
+    }]
+  },
+  options: { responsive: true }
+});
+</script>
+{% endblock %} -->
+
+
+
+<!-- fault_detection -->
+
+<!-- {% extends "base.html" %}
+{% block content %}
+<div class="row mb-3">
+  <div class="col-md-8">
+    <h2>Fault Predictions (Captured)</h2>
+    <p>Timestamp: {{ data.timestamp }}</p>
+  </div>
+  <div class="col-md-4 text-end">
+    {% if data.health_status == 'Healthy' %}
+      <div class="health-badge health-green">Healthy</div>
+    {% elif data.health_status == 'Warning' %}
+      <div class="health-badge health-yellow">Warning</div>
+    {% else %}
+      <div class="health-badge health-red">Critical</div>
+    {% endif %}
+    <p class="mt-2">{{ data.suggestion }}</p>
+  </div>
+</div>
+
+<div class="row">
+  {% for sec in data.sections %}
+    <div class="col-md-4 mb-3">
+      <div class="card">
+        {% if sec.image %}
+          <img src="{{ url_for('static', filename=sec.image) }}" class="card-img-top section-img" alt="{{ sec.fault_section }}">
+        {% else %}
+          <div class="card-img-top section-img d-flex align-items-center justify-content-center">
+            <small>No image saved</small>
+          </div>
+        {% endif %}
+        <div class="card-body text-center">
+          <h5 class="card-title">{{ sec.fault_section }}</h5>
+          <p class="card-text"><strong>{{ sec.fault_name }}</strong> &nbsp; (Value: {{ sec.fault_value }})</p>
+        </div>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+
+<div class="row mt-3">
+  <div class="col-md-6">
+    <a href="{{ url_for('calculations') }}" class="btn btn-info">Show Calculation Table</a>
+    <button class="btn btn-secondary" onclick="location.reload()">Refresh</button>
+  </div>
+</div>
+{% endblock %} -->
+
